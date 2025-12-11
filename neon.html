@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ultra To-Do App</title>
+<style>
+body{
+  margin:0; font-family:Poppins,sans-serif;
+  background:linear-gradient(135deg,#1a1a3d,#000,#342266);
+  color:white; height:100vh; overflow-x:hidden;
+}
+.page{display:none; height:100vh; width:100%; padding:15px; box-sizing:border-box;}
+.active{display:block;}
+/* LOGIN */
+.login-box{
+  width:90%; max-width:350px; background:rgba(255,255,255,0.08);
+  padding:20px; border-radius:15px; margin:120px auto;
+  backdrop-filter:blur(10px); box-shadow:0 0 20px #00eaff; border:2px solid #00eaff;
+}
+.login-box h2{text-align:center; margin-bottom:15px; color:#00eaff;}
+.login-input{width:100%; padding:12px; margin:8px 0; background:rgba(255,255,255,0.1);
+  border:none; border-radius:10px; color:white; outline:none;}
+.password-container{position:relative;}
+.show-password{position:absolute; right:10px; top:12px; cursor:pointer; color:#00eaff; font-size:14px;}
+.neon-button{width:100%; padding:12px; background:#00eaff; border:none; margin-top:12px; color:black;
+  border-radius:10px; font-weight:bold; font-size:16px; cursor:pointer;}
+/* CATEGORY */
+.category-card{
+  background: rgba(255,255,255,0.12); padding:15px; border-radius:15px;
+  margin:10px 0; font-size:18px; text-align:center; cursor:pointer; transition:0.2s;
+}
+.category-card:hover{background: rgba(0,255,255,0.2);}
+.nav-arrows{position:absolute; bottom:15px; width:100%; display:flex; justify-content:space-between; padding:0 20px;}
+.arrow{font-size:28px; cursor:pointer; user-select:none;}
+/* TASK */
+.task{background: rgba(255,255,255,0.15); padding:12px; border-radius:15px; display:flex; justify-content:space-between; margin-bottom:12px;}
+.delete-btn{cursor:pointer; font-size:20px;}
+.checkbox{transform: scale(1.4);}
+.clap{position:absolute; animation:float 1.5s ease-out forwards; font-size:25px;}
+@keyframes float{from{opacity:1; transform:translateY(0);} to{opacity:0; transform:translateY(-80px);}}
+.popup-bg{position:fixed; top:0; left:0; width:100%; height:100%; backdrop-filter:blur(5px); background:rgba(0,0,0,0.5); display:none; z-index:10;}
+.popup-box{width:90%; max-width:300px; background:white; padding:20px; border-radius:15px; color:black; margin:120px auto;}
+select, .task-input{width:100%; padding:10px; margin:10px 0; border-radius:12px; border:1px solid #ccc;}
+.popup-button{width:100%; padding:12px; background:#4b00ff; color:white; border-radius:10px; border:none; margin-top:5px;}
+input[type="date"]{width:100%; padding:12px; margin-top:12px; border-radius:12px; border:none; color:black;}
+@media(max-width:400px){.login-box{margin-top:80px; padding:15px;}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginPage" class="page active">
+  <div class="login-box">
+    <h2>🔐 Neon Login</h2>
+    <input type="text" id="email" placeholder="Email" class="login-input">
+    <div class="password-container">
+      <input type="password" id="password" placeholder="Password" class="login-input">
+      <span id="togglePw" class="show-password">Show</span>
+    </div>
+    <button id="loginBtn" class="neon-button">Login</button>
+    <p id="loginError" style="color:red;text-align:center;"></p>
+  </div>
+</div>
+
+<!-- CATEGORY -->
+<div id="categoryPage" class="page">
+  <h2>📌 Choose Category</h2>
+  <div class="category-card" data-cat="💼 Work">💼 Work</div>
+  <div class="category-card" data-cat="📚 Study">📚 Study</div>
+  <div class="category-card" data-cat="❤️ Personal">❤️ Personal</div>
+  <div class="category-card" data-cat="🛒 Shopping">🛒 Shopping</div>
+  <div class="nav-arrows"><div></div><div class="arrow" onclick="goToPage('calendarPage')">➡</div></div>
+</div>
+
+<!-- CALENDAR -->
+<div id="calendarPage" class="page">
+  <h2>📅 Select Date</h2>
+  <input type="date" id="taskDate">
+  <div class="nav-arrows"><div class="arrow" onclick="goToPage('categoryPage')">⬅</div><div class="arrow" onclick="goToPage('taskPage')">➡</div></div>
+</div>
+
+<!-- TASK PAGE -->
+<div id="taskPage" class="page">
+  <h2>📝 Tasks</h2>
+  <button class="neon-button" id="addTaskBtn">+ Add Task</button>
+  <div id="taskList"></div>
+  <div class="nav-arrows"><div class="arrow" onclick="goToPage('calendarPage')">⬅</div><div class="arrow" onclick="goToPage('completedPage')">➡</div></div>
+</div>
+
+<!-- COMPLETED -->
+<div id="completedPage" class="page">
+  <h2>✅ Completed Tasks</h2>
+  <div id="completedList"></div>
+  <div class="nav-arrows"><div class="arrow" onclick="goToPage('taskPage')">⬅</div><div></div></div>
+</div>
+
+<!-- POPUP -->
+<div id="popup" class="popup-bg">
+  <div class="popup-box">
+    <h3>Add Task</h3>
+    <input type="text" id="taskName" class="task-input" placeholder="Task Name">
+    <select id="taskCategory"></select>
+    <button class="popup-button" id="popupAddBtn">Add</button>
+    <button class="popup-button" style="background:#555" onclick="closePopup()">Cancel</button>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+  // LOGIN
+  const loginBtn = document.getElementById("loginBtn");
+  const togglePw = document.getElementById("togglePw");
+  loginBtn.addEventListener("click", function(){
+    const email=document.getElementById("email").value.trim();
+    const pass=document.getElementById("password").value.trim();
+    const error=document.getElementById("loginError");
+    if(email===""){ error.innerText="Email cannot be empty!"; return;}
+    if(pass===""){ error.innerText="Password cannot be empty!"; return;}
+    error.innerText="";
+    goToPage('categoryPage');
+  });
+  togglePw.addEventListener("click", function(){
+    const pw=document.getElementById("password");
+    if(pw.type==="password"){ pw.type="text"; togglePw.innerText="Hide";}
+    else{ pw.type="password"; togglePw.innerText="Show";}
+  });
+
+  // CATEGORY BUTTONS
+  const catCards=document.querySelectorAll(".category-card");
+  const taskCategorySelect=document.getElementById("taskCategory");
+  catCards.forEach(c=>{
+    c.addEventListener("click", function(){
+      taskCategorySelect.innerHTML=`<option>${c.dataset.cat}</option>`;
+      goToPage('calendarPage');
+    });
+  });
+
+  // ADD TASK POPUP
+  document.getElementById("addTaskBtn").addEventListener("click", openPopup);
+  document.getElementById("popupAddBtn").addEventListener("click", addTask);
+});
+
+// PAGE SWITCH
+function goToPage(id){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+// TASKS
+let tasks=[], completed=[];
+function openPopup(){ document.getElementById("popup").style.display="block"; }
+function closePopup(){ document.getElementById("popup").style.display="none"; }
+function addTask(){
+  const name=document.getElementById("taskName").value.trim();
+  const category=document.getElementById("taskCategory").value;
+  if(name==="") return;
+  tasks.push({name,category});
+  displayTasks();
+  closePopup();
+  document.getElementById("taskName").value="";
+}
+function displayTasks(){
+  const list=document.getElementById("taskList"); list.innerHTML="";
+  tasks.forEach((t,i)=>{
+    const div=document.createElement("div"); div.className="task";
+    div.innerHTML=`<span><input type="checkbox" class="checkbox" onclick="completeTask(${i})"> ${t.category} - ${t.name}</span>
+    <span class="delete-btn" onclick="deleteTask(${i})">🗑</span>`;
+    list.appendChild(div);
+  });
+}
+function deleteTask(i){ tasks.splice(i,1); displayTasks(); }
+function completeTask(i){
+  completed.push(tasks[i]); tasks.splice(i,1); displayTasks(); displayCompleted(); createClaps();
+}
+function displayCompleted(){
+  const list=document.getElementById("completedList"); list.innerHTML="";
+  completed.forEach(t=>{ const div=document.createElement("div"); div.className="task"; div.innerHTML=`${t.category} - ${t.name}`; list.appendChild(div); });
+}
+function createClaps(){
+  for(let i=0;i<5;i++){
+    const clap=document.createElement("div"); clap.className="clap"; clap.innerHTML="👏";
+    clap.style.left=Math.random()*80+"%"; clap.style.bottom="20px";
+    document.body.appendChild(clap);
+    setTimeout(()=>clap.remove(),1500);
+  }
+}
+</script>
+</body>
+</html>
